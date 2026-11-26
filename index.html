@@ -57,6 +57,8 @@ td.n,th.n{text-align:right}
 .fr{margin-bottom:14px}
 .fr>.t{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
 .fr input[type=text],.fr input[type=tel],.fr input[type=date]{width:100%;max-width:380px}
+.fr textarea{width:100%;max-width:520px;min-height:84px;resize:vertical;font-family:inherit}
+.cnt{font-size:12px;color:var(--mute)}
 .rg{display:flex;gap:8px;flex-wrap:wrap}
 .rg label{border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:14px}
 .rg label:has(input:checked){background:var(--pink-l);border-color:var(--pink);color:var(--pink);font-weight:700}
@@ -112,6 +114,9 @@ td.n,th.n{text-align:right}
         <input type="text" id="oAddr" name="deliveryAddress" autocomplete="street-address" maxlength="200" placeholder="도로명 주소와 상세 주소" style="max-width:520px"></div>
       <div class="fr"><label class="t" for="oDate" id="dateLbl">픽업 날짜</label>
         <input type="date" id="oDate" name="pickupDate"> <span class="note">입력칸을 누르면 달력이 열립니다.</span></div>
+      <div class="fr"><label class="t" for="oReq">추가 요청사항 <span class="note">(선택)</span></label>
+        <textarea id="oReq" name="requestNote" maxlength="300" autocomplete="off" placeholder="예: 분홍색 계열로 해 주세요 / 카드 문구: 생일 축하해"></textarea>
+        <div class="cnt"><span id="reqCnt">0</span> / 300자</div></div>
       <button class="btn green" id="sendBtn" type="submit">📨 사장님께 전달하기</button>
     </form>
     <p class="note">전달한 내용은 사장님만 볼 수 있고, 손님 화면에서는 다시 볼 수 없습니다.</p>
@@ -312,6 +317,8 @@ function syncMethod(){
 }
 document.querySelectorAll('input[name="oMethod"]').forEach(r => r.addEventListener("change", syncMethod));
 $("orderForm").addEventListener("submit", e => { e.preventDefault(); sendOrder(); });
+$("oReq").addEventListener("input", () => { $("reqCnt").textContent = $("oReq").value.length; });
+$("orderForm").addEventListener("reset", () => { $("reqCnt").textContent = 0; });
 
 async function sendOrder(){
   const msg = $("sendMsg");
@@ -333,6 +340,9 @@ async function sendOrder(){
   if(date < todayStr()) return fail("오늘 이후의 날짜를 선택해 주세요.");
   const data = { items, name, phone, kind:kindEl.value, method, pickupDate:date, createdAt: serverTimestamp() };
   if(method==="배달") data.address = addr;
+  const reqNote = $("oReq").value.trim();
+  if(reqNote.length>300) return fail("추가 요청사항은 300자 이내로 적어 주세요.");
+  if(reqNote) data.request = reqNote;
   const btn = $("sendBtn"); btn.disabled = true; msg.className="msg"; msg.textContent="전달하는 중...";
   try{
     await addDoc(collection(db,"orders"), data);
@@ -398,10 +408,10 @@ function fmtPhone(p){
 }
 function renderOrders(){
   if(!orders.length){ $("orderList").innerHTML = ""; return; }
-  $("orderList").innerHTML = `<h3>📋 접수된 주문서 (날짜 빠른 순)</h3><div class="wrap"><table><thead><tr><th>날짜</th><th>이름</th><th>전화번호</th><th>종류</th><th>수령 방식</th><th>품목</th></tr></thead><tbody>` +
+  $("orderList").innerHTML = `<h3>📋 접수된 주문서 (날짜 빠른 순)</h3><div class="wrap"><table><thead><tr><th>날짜</th><th>이름</th><th>전화번호</th><th>종류</th><th>수령 방식</th><th>품목</th><th>추가 요청사항</th></tr></thead><tbody>` +
     orders.map(o => `<tr><td>${esc(o.pickupDate||"-")}</td><td>${esc(o.name||"-")}</td><td>${esc(fmtPhone(o.phone))}</td><td>${esc(o.kind||"-")}</td>
       <td>${esc(o.method||"-")}${o.method==="배달" && o.address ? "<br>" + esc(o.address) : ""}</td>
-      <td>${(o.items||[]).map(it => esc(it.name)+" × "+esc(it.qty)).join("<br>")}</td></tr>`).join("") +
+      <td>${(o.items||[]).map(it => esc(it.name)+" × "+esc(it.qty)).join("<br>")}</td><td style="white-space:pre-wrap;min-width:140px">${esc(o.request||"-")}</td></tr>`).join("") +
     `</tbody></table></div>`;
 }
 function rec(id){
