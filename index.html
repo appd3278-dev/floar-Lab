@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>꽃집 운영 통합 지원 플랫폼</title>
+<style>
+:root{--pink:#e8618c;--pink-l:#fde8ef;--green:#4b8b6b;--green-l:#e6f3ec;--ink:#2d2a2e;--mute:#7a7480;--line:#eadfe4;--bg:#fff9fb;--red:#d64545;--amber:#d98a1f}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:linear-gradient(135deg,#fbd3e0,#e6f3ec);padding:24px 16px 16px;text-align:center}
+header h1{margin:0 0 4px;font-size:24px}
+header p{margin:0;color:var(--mute);font-size:14px}
+nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px;position:sticky;top:0;background:rgba(255,249,251,.95);border-bottom:1px solid var(--line);z-index:5}
+nav button{border:1px solid var(--line);background:#fff;padding:9px 16px;border-radius:999px;cursor:pointer;font-size:14px;font-weight:600;color:var(--mute)}
+nav button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
+main{max-width:1000px;margin:0 auto;padding:18px}
+section{display:none}section.on{display:block}
+.warn{background:#fff4d6;border:1px solid #f0d58a;padding:10px 14px;border-radius:10px;font-size:13px;margin:0 0 14px}
+.note{color:var(--mute);font-size:13px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+input[type=text],input[type=email],input[type=password],input[type=number]{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+button.btn{border:0;background:var(--pink);color:#fff;padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px}
+button.btn.sub{background:#fff;color:var(--pink);border:1px solid var(--pink)}
+button.btn.green{background:var(--green)}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:#fff;padding:5px 12px;border-radius:999px;font-size:13px;cursor:pointer}
+.chip.on{background:var(--pink-l);border-color:var(--pink);color:var(--pink);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+.card .em{font-size:38px}
+.card h3{margin:4px 0 2px;font-size:17px}
+.tag{display:inline-block;background:var(--pink-l);color:var(--pink);border-radius:999px;padding:1px 8px;font-size:12px;margin:2px 2px 0 0}
+.tag.g{background:var(--green-l);color:var(--green)}
+.card p{margin:4px 0;font-size:13px;color:var(--mute)}
+.card .act{margin-top:8px;display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{background:var(--green-l);font-size:13px}
+td.n,th.n{text-align:right}
+.q button{width:28px;height:28px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer}
+.q span{display:inline-block;min-width:26px;text-align:center}
+.risk{font-weight:700}
+.risk.ok{color:var(--green)}.risk.over{color:var(--red)}.risk.short{color:var(--amber)}.risk.none{color:var(--mute);font-weight:400}
+.box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;max-width:420px;margin:20px auto}
+.box input{width:100%;margin-bottom:10px}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.sum div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13px;color:var(--mute)}
+.sum b{display:block;font-size:20px;color:var(--ink)}
+.empty{text-align:center;color:var(--mute);padding:36px 0}
+.msg{margin:8px 0;font-size:13px}.msg.err{color:var(--red)}.msg.ok{color:var(--green)}
+.wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌸 꽃집 운영 통합 지원 플랫폼</h1>
+  <p>손님이 꽃을 담아 보내면, 사장님만 볼 수 있는 매입 체크표로 모입니다</p>
+</header>
+<nav>
+  <button data-tab="browse" class="on">① 꽃 탐색·추천</button>
+  <button data-tab="cart">② 장바구니 <span id="cartCount"></span></button>
+  <button data-tab="owner">③ 매입 체크표 🔒</button>
+</nav>
+<main>
+  <div id="cfgWarn" class="warn" style="display:none">⚠️ 아직 firebaseConfig를 넣지 않았습니다. 파일 위쪽 스크립트의 <b>firebaseConfig</b>를 Firebase 콘솔에서 복사한 값으로 바꿔 주세요. 그 전에는 전달·로그인이 동작하지 않습니다.</div>
+
+  <!-- ① 탐색 -->
+  <section id="browse" class="on">
+    <div class="bar">
+      <input type="text" id="kw" placeholder="느낌 키워드 (예: 로맨틱, 청순, 감사)" style="flex:1;min-width:200px">
+      <span class="note" id="seasonInfo"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="flowerGrid"></div>
+  </section>
+
+  <!-- ② 장바구니 -->
+  <section id="cart">
+    <div id="cartBody"></div>
+    <p class="note">전달한 내용은 사장님만 볼 수 있고, 손님 화면에서는 다시 볼 수 없습니다.</p>
+    <div id="sendMsg" class="msg"></div>
+  </section>
+
+  <!-- ③ 사장님 -->
+  <section id="owner">
+    <div id="loginBox" class="box">
+      <h3 style="margin-top:0">🔒 사장님 로그인</h3>
+      <input type="email" id="email" placeholder="이메일">
+      <input type="password" id="pw" placeholder="비밀번호">
+      <button class="btn" id="loginBtn" style="width:100%">로그인</button>
+      <div id="loginMsg" class="msg err"></div>
+    </div>
+    <div id="ownerBody" style="display:none">
+      <div class="bar">
+        <button class="btn green" id="reloadBtn">🔄 새로고침</button>
+        <button class="btn sub" id="csvBtn">CSV 내려받기</button>
+        <button class="btn sub" id="clearBtn">접수 내역 비우기</button>
+        <button class="btn sub" id="logoutBtn" style="margin-left:auto">로그아웃</button>
+      </div>
+      <div id="ownerMsg" class="msg"></div>
+      <div id="ownerTable"></div>
+      <p class="note">※ 추천 매입량은 실제 판매 기록으로 계산한 예측이 아니라, 보관 난이도별 여유율(쉬움 1.2 / 보통 1.1 / 어려움 1.0)을 곱해 올림한 규칙 기반 참고값입니다.<br>위험도: 추천량 대비 ±20% 이내 적당, 초과 시 버릴 위험, 미달 시 부족 위험(보관 어려운 꽃은 +10%만 넘어도 버릴 위험).</p>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+/* ▼▼▼ 여기를 Firebase 콘솔에서 복사한 값으로 바꾸세요 ▼▼▼ */
+const firebaseConfig = {
+  apiKey: "AIzaSyC_DcbHdg7g6cJyQZCbOoLb7ld1jWh102U",
+  authDomain: "floar-lab.firebaseapp.com",
+  projectId: "floar-lab",
+  storageBucket: "floar-lab.firebasestorage.app",
+  messagingSenderId: "13288946704",
+  appId: "1:13288946704:web:68347eb354ece5c7cf1e95",
+  measurementId: "G-LXWFZB66RX"
+};
+/* ▲▲▲ ------------------------------------------------ ▲▲▲ */
+
+const configured = !firebaseConfig.apiKey.startsWith("여기에");
+let db = null, auth = null, loggedIn = false;
+if (configured) {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} else {
+  document.getElementById("cfgWarn").style.display = "block";
+}
+
+/* ---------- 꽃 데이터 (예시값: 꽃말·태그는 발표 전 출처 확인 필요) ---------- */
+// [id, 이름, 이모지, 색, 꽃말, 느낌태그, 시기, 보관난이도]
+const RAW = [
+ ["rose","장미","🌹","빨강·분홍·흰색","사랑","로맨틱,화려함,사랑","연중","보통"],
+ ["carnation","카네이션","🌺","빨강·분홍","감사, 존경","감사,따뜻함","연중","쉬움"],
+ ["gerbera","거베라","🌼","주황·노랑·분홍","희망","발랄함,축하","연중","보통"],
+ ["gypso","안개꽃","🤍","흰색","맑은 마음","청순,은은함","연중","쉬움"],
+ ["lisianthus","리시안셔스","💜","보라·흰색","변치 않는 사랑","우아함,로맨틱","연중","어려움"],
+ ["stock","스타티스","💐","보라·분홍","영원한 사랑","은은함,차분함","연중","쉬움"],
+ ["eucalyptus","유칼립투스","🌿","초록","추억","차분함,내추럴","연중","쉬움"],
+ ["alstro","알스트로메리아","🌷","분홍·노랑","우정, 배려","발랄함,축하","연중","쉬움"],
+ ["chrys","국화","🏵️","노랑·흰색","진실, 감사","차분함,감사","가을","쉬움"],
+ ["sogook","소국","🌼","노랑·분홍","순수","청순,발랄함","가을","쉬움"],
+ ["cosmos","코스모스","🌸","분홍·흰색","순정","청순,설렘","가을","어려움"],
+ ["cotton","목화","☁️","흰색","어머니의 사랑","따뜻함,내추럴","가을","쉬움"],
+ ["tulip","튤립","🌷","빨강·노랑·보라","사랑의 고백","로맨틱,발랄함","봄","보통"],
+ ["freesia","프리지아","💛","노랑","순결, 새 출발","발랄함,축하","봄","보통"],
+ ["ranun","라넌큘러스","🌸","분홍·주황","매력","화려함,우아함","봄","어려움"],
+ ["peony","작약","🌸","분홍·흰색","수줍음","로맨틱,우아함","봄","어려움"],
+ ["lilac","라일락","💜","보라·흰색","첫사랑","설렘,은은함","봄","어려움"],
+ ["hydrangea","수국","💙","파랑·분홍","진심","청순,화려함","여름","보통"],
+ ["sunflower","해바라기","🌻","노랑","숭배, 기다림","발랄함,당당함","여름","보통"],
+ ["lily","백합","🤍","흰색·분홍","순결","우아함,청순","여름","보통"],
+ ["dahlia","달리아","🌺","빨강·분홍","감사","화려함,우아함","여름","보통"],
+ ["zinnia","백일홍","🌼","주황·분홍","그리움","발랄함,따뜻함","여름","쉬움"],
+ ["anemone","아네모네","🌸","빨강·보라·흰색","기대","설렘,차분함","겨울","어려움"],
+ ["camellia","동백","🌺","빨강","그대만을 사랑해","화려함,로맨틱","겨울","보통"],
+ ["poinsettia","포인세티아","🎄","빨강","축복","화려함,축하","겨울","보통"],
+ ["daffodil","수선화","💛","노랑","자존심","발랄함,새출발","겨울","쉬움"],
+ ["cymbidium","심비디움","🌺","분홍·초록","귀부인","우아함,화려함","겨울","쉬움"],
+ ["hyacinth","히아신스","💜","보라·분홍","겸손한 사랑","은은함,설렘","겨울","보통"]
+];
+const FL = RAW.map(r => ({id:r[0],name:r[1],em:r[2],color:r[3],meaning:r[4],tags:r[5].split(","),season:r[6],shelf:r[7]}));
+const FMAP = Object.fromEntries(FL.map(f => [f.id,f]));
+
+/* ---------- 현재 계절 ---------- */
+const month = new Date().getMonth()+1;
+const SEASON = month>=3&&month<=5?"봄":month>=6&&month<=8?"여름":month>=9&&month<=11?"가을":"겨울";
+const AVAIL = FL.filter(f => f.season==="연중" || f.season===SEASON);
+document.getElementById("seasonInfo").textContent = `현재 계절: ${SEASON} · 매입 가능한 꽃 ${AVAIL.length}종만 표시`;
+
+/* ---------- 상태 ---------- */
+let cart = {};          // {id: qty}
+let activeTag = "";
+let demand = {};        // {id: {name, qty}}
+let orderCount = 0;
+let orderQty = {}, memo = {};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x===b));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id===b.dataset.tab));
+  if (b.dataset.tab==="cart") renderCart();
+}));
+
+/* ---------- ① 탐색 ---------- */
+const allTags = [...new Set(AVAIL.flatMap(f => f.tags))];
+function renderChips(){
+  $("chips").innerHTML = `<span class="chip ${activeTag===""?"on":""}" data-t="">전체</span>` +
+    allTags.map(t => `<span class="chip ${activeTag===t?"on":""}" data-t="${esc(t)}">#${esc(t)}</span>`).join("");
+}
+$("chips").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if(!c) return;
+  activeTag = c.dataset.t; renderChips(); renderFlowers();
+});
+$("kw").addEventListener("input", renderFlowers);
+function renderFlowers(){
+  const k = $("kw").value.trim();
+  const list = AVAIL.filter(f =>
+    (!activeTag || f.tags.includes(activeTag)) &&
+    (!k || f.tags.some(t => t.includes(k)) || f.name.includes(k) || f.meaning.includes(k)));
+  $("flowerGrid").innerHTML = list.length ? list.map(f => `
+    <div class="card">
+      <div class="em">${f.em}</div>
+      <h3>${f.name}</h3>
+      <div>${f.tags.map(t=>`<span class="tag">#${t}</span>`).join("")}<span class="tag g">${f.season}</span></div>
+      <p>꽃말: ${f.meaning}<br>색: ${f.color}<br>보관: ${f.shelf}</p>
+      <div class="act"><button class="btn" data-add="${f.id}">🛒 담기</button>
+      <span class="note">${cart[f.id]?`담은 수량 ${cart[f.id]}`:""}</span></div>
+    </div>`).join("") : `<div class="empty">조건에 맞는 꽃이 없어요.</div>`;
+}
+$("flowerGrid").addEventListener("click", e => {
+  const id = e.target.dataset.add; if(!id) return;
+  cart[id] = (cart[id]||0)+1; updateCartCount(); renderFlowers();
+});
+
+/* ---------- ② 장바구니 ---------- */
+function updateCartCount(){
+  const n = Object.values(cart).reduce((a,b)=>a+b,0);
+  $("cartCount").textContent = n ? `(${n})` : "";
+}
+function renderCart(){
+  const ids = Object.keys(cart);
+  if(!ids.length){ $("cartBody").innerHTML = `<div class="empty">장바구니가 비어 있어요. 꽃 탐색에서 담아 보세요.</div>`; return; }
+  $("cartBody").innerHTML = `<div class="wrap"><table><thead><tr><th>꽃</th><th>수량</th><th></th></tr></thead><tbody>` +
+    ids.map(id => `<tr><td>${FMAP[id].em} ${FMAP[id].name}</td>
+      <td class="q"><button data-m="${id}">−</button><span>${cart[id]}</span><button data-p="${id}">＋</button></td>
+      <td><button class="btn sub" data-d="${id}">삭제</button></td></tr>`).join("") +
+    `</tbody></table></div>
+    <div class="bar" style="margin-top:12px">
+      <button class="btn green" id="sendBtn">📨 사장님께 전달하기</button>
+      <button class="btn sub" id="emptyBtn">비우기</button>
+    </div>`;
+}
+$("cartBody").addEventListener("click", async e => {
+  const t = e.target;
+  if (t.dataset.p){ cart[t.dataset.p]++; }
+  else if (t.dataset.m){ cart[t.dataset.m]--; if(cart[t.dataset.m]<=0) delete cart[t.dataset.m]; }
+  else if (t.dataset.d){ delete cart[t.dataset.d]; }
+  else if (t.id==="emptyBtn"){ cart = {}; }
+  else if (t.id==="sendBtn"){ await sendOrder(); return; }
+  else return;
+  updateCartCount(); renderCart(); renderFlowers();
+});
+async function sendOrder(){
+  const msg = $("sendMsg");
+  if(!configured){ msg.className="msg err"; msg.textContent="firebaseConfig가 설정되지 않았습니다."; return; }
+  const items = Object.entries(cart).map(([id,qty]) => ({id, name:FMAP[id].name, qty}));
+  if(!items.length) return;
+  const btn = $("sendBtn"); btn.disabled = true; msg.className="msg"; msg.textContent="전달하는 중...";
+  try{
+    await addDoc(collection(db,"orders"), { items, createdAt: serverTimestamp() });
+    cart = {}; updateCartCount(); renderFlowers(); renderCart();
+    msg.className="msg ok"; msg.textContent="✅ 사장님께 전달했어요. 감사합니다!";
+  }catch(err){
+    console.error(err);
+    msg.className="msg err"; msg.textContent="전달에 실패했어요: " + (err.code||err.message);
+    btn.disabled = false;
+  }
+}
+
+/* ---------- ③ 사장님 ---------- */
+if (configured) {
+  onAuthStateChanged(auth, user => {
+    loggedIn = !!user;
+    $("loginBox").style.display = loggedIn ? "none" : "block";
+    $("ownerBody").style.display = loggedIn ? "block" : "none";
+    if (loggedIn) loadOrders();
+  });
+}
+$("loginBtn").addEventListener("click", async () => {
+  const m = $("loginMsg");
+  if(!configured){ m.textContent="firebaseConfig가 설정되지 않았습니다."; return; }
+  m.textContent = "";
+  try{
+    await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pw").value);
+    $("pw").value = "";
+  }catch(err){
+    m.textContent = "로그인 실패: " + (err.code||err.message);
+  }
+});
+$("logoutBtn").addEventListener("click", () => signOut(auth));
+$("reloadBtn").addEventListener("click", loadOrders);
+
+async function loadOrders(){
+  const m = $("ownerMsg"); m.className="msg"; m.textContent="불러오는 중...";
+  try{
+    const snap = await getDocs(collection(db,"orders"));
+    demand = {}; orderCount = snap.size;
+    snap.forEach(d => (d.data().items||[]).forEach(it => {
+      if(!demand[it.id]) demand[it.id] = {name:it.name, qty:0};
+      demand[it.id].qty += Number(it.qty)||0;
+    }));
+    m.textContent = "";
+    renderOwner();
+  }catch(err){
+    console.error(err);
+    m.className="msg err";
+    m.textContent = "불러오기 실패: " + (err.code||err.message) + " (사장님 UID가 규칙과 같은지 확인하세요)";
+  }
+}
+function rec(id){
+  const f = FMAP[id], q = demand[id].qty;
+  const k = f ? ({"쉬움":1.2,"보통":1.1,"어려움":1.0}[f.shelf]) : 1.1;
+  return Math.ceil(q*k - 1e-9);
+}
+function risk(id){
+  const v = orderQty[id];
+  if (v===undefined || v==="" || isNaN(v)) return {cls:"none", label:"입력 대기", diff:""};
+  const r = rec(id), diff = v - r, ratio = r ? diff/r : 0;
+  const hard = FMAP[id] && FMAP[id].shelf==="어려움";
+  if (ratio > (hard?0.1:0.2)) return {cls:"over", label:"버릴 위험", diff};
+  if (ratio < -0.2) return {cls:"short", label:"부족 위험", diff};
+  return {cls:"ok", label:"적당", diff};
+}
+function renderOwner(){
+  const ids = Object.keys(demand).sort((a,b)=>demand[b].qty-demand[a].qty);
+  if(!ids.length){ $("ownerTable").innerHTML = `<div class="empty">아직 접수된 주문이 없어요.</div>`; return; }
+  const totalQ = ids.reduce((s,i)=>s+demand[i].qty,0);
+  $("ownerTable").innerHTML = `
+    <div class="sum"><div>접수 건수<b>${orderCount}건</b></div><div>꽃 종류<b>${ids.length}종</b></div><div>고객 수요 합계<b>${totalQ}송이</b></div></div>
+    <div class="wrap"><table><thead><tr><th>꽃</th><th>보관</th><th class="n">고객 수요</th><th class="n">추천 매입량</th><th class="n">내 주문량</th><th class="n">차이</th><th>위험도</th><th>메모</th></tr></thead><tbody>` +
+    ids.map(id => {
+      const f = FMAP[id], r = risk(id);
+      return `<tr data-id="${esc(id)}">
+        <td>${f?f.em:""} ${esc(demand[id].name)}</td><td>${f?f.shelf:"-"}</td>
+        <td class="n">${demand[id].qty}</td><td class="n"><b>${rec(id)}</b></td>
+        <td class="n"><input type="number" min="0" style="width:80px" data-o="${esc(id)}" value="${orderQty[id]??""}"></td>
+        <td class="n" data-diff>${r.diff===""?"":(r.diff>0?"+":"")+r.diff}</td>
+        <td class="risk ${r.cls}" data-risk>${r.label}</td>
+        <td><input type="text" style="width:140px" data-memo="${esc(id)}" value="${esc(memo[id]||"")}"></td></tr>`;
+    }).join("") + `</tbody></table></div>`;
+}
+$("ownerTable").addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.o !== undefined){
+    const id = t.dataset.o;
+    orderQty[id] = t.value==="" ? undefined : Number(t.value);
+    const tr = t.closest("tr"), r = risk(id);
+    tr.querySelector("[data-diff]").textContent = r.diff===""?"":(r.diff>0?"+":"")+r.diff;
+    const rk = tr.querySelector("[data-risk]"); rk.className = "risk "+r.cls; rk.textContent = r.label;
+  } else if (t.dataset.memo !== undefined){
+    memo[t.dataset.memo] = t.value;
+  }
+});
+$("clearBtn").addEventListener("click", async () => {
+  if(!confirm("접수된 주문을 모두 삭제할까요? 되돌릴 수 없습니다.")) return;
+  try{
+    const snap = await getDocs(collection(db,"orders"));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    orderQty = {}; memo = {};
+    loadOrders();
+  }catch(err){
+    $("ownerMsg").className="msg err"; $("ownerMsg").textContent="삭제 실패: "+(err.code||err.message);
+  }
+});
+$("csvBtn").addEventListener("click", () => {
+  const ids = Object.keys(demand); if(!ids.length) return;
+  const rows = [["꽃","보관난이도","고객수요","추천매입량","내주문량","차이","위험도","메모"]];
+  ids.forEach(id => { const r = risk(id), f = FMAP[id];
+    rows.push([demand[id].name, f?f.shelf:"-", demand[id].qty, rec(id), orderQty[id]??"", r.diff, r.label, memo[id]||""]); });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8"}));
+  a.download = "매입체크표.csv"; a.click();
+});
+
+/* ---------- 시작 ---------- */
+renderChips(); renderFlowers(); updateCartCount();
+</script>
+</body>
+</html>
